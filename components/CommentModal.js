@@ -29,10 +29,11 @@ export default function CommentModal() {
       username: session.user.username,
       userImg: session.user.image,
       timestamp: serverTimestamp(),
+      userId: session.user.uid,
     });
     setOpen(false);
     setInput("");
-    router.push(`posts/${postId}`);
+    router.push(`/posts/${postId}`);
   }
 
   return (
