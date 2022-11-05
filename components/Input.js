@@ -1,11 +1,14 @@
 import { EmojiHappyIcon, PhotographIcon, XIcon } from "@heroicons/react/outline";
+import { getAuth, signOut } from "firebase/auth";
 import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadString } from "firebase/storage";
-import { useSession, signOut } from "next-auth/react";
 import { useState, useRef } from "react";
+import { useRecoilState } from "recoil";
+import { userState } from "../atom/userAtom";
 import { db, storage } from "../firebase";
 export default function Input() {
-  const { data: session } = useSession();
+  const [currentUser, setCurrentUser] = useRecoilState(userState);
+
   const [input, setInput] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -16,12 +19,12 @@ export default function Input() {
     setLoading(true);
 
     const docRef = await addDoc(collection(db, "posts"), {
-      id: session.user.uid,
+      id: currentUser.uid,
       text: input,
-      userImg: session.user.image,
+      userImg: currentUser.userImg,
       timestamp: serverTimestamp(),
-      name: session.user.name,
-      username: session.user.username,
+      name: currentUser.name,
+      username: currentUser.username,
     });
 
     const imageRef = ref(storage, `posts/${docRef.id}/image`);
@@ -51,13 +54,19 @@ export default function Input() {
     };
   };
 
+  function onSignOut() {
+    const auth = getAuth();
+    signOut(auth);
+    setCurrentUser(null);
+  }
+
   return (
     <>
-      {session && (
+      {currentUser && (
         <div className="flex  border-b border-gray-200 p-3 space-x-3">
           <img
-            onClick={signOut}
-            src={session.user.image}
+            onClick={onSignOut}
+            src={currentUser.userImg}
             alt="user-img"
             className="h-11 w-11 rounded-full cursor-pointer hover:brightness-95"
           />

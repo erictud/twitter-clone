@@ -10,21 +10,21 @@ import {
 import { HeartIcon as HeartIconFilled } from "@heroicons/react/solid";
 import { collection, deleteDoc, doc, onSnapshot, setDoc } from "firebase/firestore";
 import { deleteObject, ref } from "firebase/storage";
-import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import Moment from "react-moment";
 import { useRecoilState } from "recoil";
 import { modalState, postIdState } from "../atom/modalAtom";
+import { userState } from "../atom/userAtom";
 import { db, storage } from "../firebase";
 
 export default function Post({ comment, commentId, originalPostId }) {
   const router = useRouter();
-  const { data: session } = useSession();
   const [likes, setLikes] = useState([]);
   const [hasLiked, setHasLiked] = useState([]);
   const [open, setOpen] = useRecoilState(modalState);
   const [postId, setpostId] = useRecoilState(postIdState);
+  const [currentUser, setCurrentUser] = useRecoilState(userState);
   useEffect(() => {
     const unsubscribe = onSnapshot(
       collection(db, "posts", originalPostId, "comments", commentId, "likes"),
@@ -33,25 +33,25 @@ export default function Post({ comment, commentId, originalPostId }) {
   }, [db, originalPostId]);
 
   useEffect(() => {
-    setHasLiked(likes.findIndex((like) => like.id === session?.user.uid) !== -1);
-  }, [likes]);
+    setHasLiked(likes.findIndex((like) => like.id === currentUser?.uid) !== -1);
+  }, [likes, currentUser]);
 
   async function likeComment() {
-    if (session) {
+    if (currentUser) {
       if (hasLiked) {
         await deleteDoc(
-          doc(db, "posts", originalPostId, "comments", commentId, "likes", session?.user.uid)
+          doc(db, "posts", originalPostId, "comments", commentId, "likes", currentUser?.uid)
         );
       } else {
         await setDoc(
-          doc(db, "posts", originalPostId, "comments", commentId, "likes", session?.user.uid),
+          doc(db, "posts", originalPostId, "comments", commentId, "likes", currentUser?.uid),
           {
-            username: session.user.username,
+            username: currentUser?.username,
           }
         );
       }
     } else {
-      signIn();
+      router.push("/api/signin");
     }
   }
 
@@ -90,8 +90,8 @@ export default function Post({ comment, commentId, originalPostId }) {
           <div className="flex items-center select-none">
             <ChatIcon
               onClick={() => {
-                if (!session) {
-                  signIn();
+                if (!currentUser) {
+                  router.push("/api/signin");
                 } else {
                   setpostId(originalPostId);
                   setOpen(!open);
@@ -100,7 +100,7 @@ export default function Post({ comment, commentId, originalPostId }) {
               className="h-9 w-9 hoverEffect p-2 hover:text-sky-500 hover:bg-sky-100"
             />
           </div>
-          {session?.user.uid === comment?.userId && (
+          {currentUser?.uid === comment?.userId && (
             <TrashIcon
               onClick={deleteComment}
               className="h-9 w-9 hoverEffect p-2 hover:text-red-600 hover:bg-red-100"
